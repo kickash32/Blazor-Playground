@@ -1,0 +1,78 @@
+@page "/fetchdata"
+@using BlazorApp1.Shared
+@inject HttpClient Http
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                @foreach (var header in headers)
+                {
+                    <th>@header</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var forecast in forecasts)
+            {
+                <tr>
+                    @foreach (var header in headers)
+                    {
+                        <td>@InfoFor(forecast, header)</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter]
+    public string[] ColumnOrder { get; set; }
+    private List<string> headers = new List<string>() { "Date", "Temp. (C)", "Temp. (F)", "Summary" };
+
+    private WeatherForecast[] forecasts = null;
+
+    private string InfoFor(WeatherForecast forecast, string header)
+    {
+        switch (header)
+        {
+            case "Date":
+                return forecast.Date.ToShortDateString();
+            case "Temp. (C)":
+                return forecast.TemperatureC.ToString();
+            case "Temp. (F)":
+                return forecast.TemperatureF.ToString();
+            case "Summary":
+                return forecast.Summary;
+            default:
+                throw new Exception("Unhandled Header");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ColumnOrder = new string[] { "Summary" };
+
+        List<string> order = ColumnOrder?.ToList() ?? headers;
+        var unknownColumns = order.Where(header => !headers.Contains(header));
+        if (unknownColumns.Count() != 0) throw new Exception($"Unknown column(s) in ColumnOrder: {String.Join(',', unknownColumns)}");
+
+        headers = order.
+            Concat(headers.Where(header => !order.Contains(header)))
+            .ToList();
+
+        await Task.Delay(2000);
+        forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("WeatherForecast");
+    }
+
+}
